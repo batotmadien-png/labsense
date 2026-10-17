@@ -14,6 +14,8 @@ const STRINGS = {
     urgent: "Please talk to a doctor soon",
     error: "Something went wrong. Check the photo and try again.",
     notlab: "This doesn't look like a lab report. Try a clearer photo of the results page.",
+    listen: "Listen to the explanation", stop: "Stop",
+    novoice: "No voice for this language is installed on this device.",
     disclaimer: "For education only. This is not a diagnosis and does not replace your doctor."
   },
   ar: {
@@ -30,6 +32,8 @@ const STRINGS = {
     urgent: "كلّم دكتور في أقرب وقت",
     error: "حصلت مشكلة. اتأكد من الصورة وجرّب تاني.",
     notlab: "الصورة دي مش شبه تقرير تحاليل. جرّب صورة أوضح لصفحة النتائج.",
+    listen: "اسمع الشرح", stop: "إيقاف",
+    novoice: "مفيش صوت للغة دي متسطّب على الجهاز ده.",
     disclaimer: "للتوعية فقط. ده مش تشخيص ولا بديل عن الدكتور."
   }
 };

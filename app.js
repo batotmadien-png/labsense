@@ -2,6 +2,8 @@ const $ = s => document.querySelector(s);
 const sel = $('#lang'), fileIn = $('#file'), go = $('#go'), prev = $('#preview'), statusEl = $('#status');
 let cur = { code: 'en', name: 'English', rtl: false, dict: STRINGS.en };
 let imageData = null;
+let lastData = null;
+let speaking = false;
 
 function t(k) { return cur.dict[k] || STRINGS.en[k] || k; }
 
@@ -82,6 +84,7 @@ function li(cls, ...kids) { const e = document.createElement('li'); if (cls) e.c
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
 function render(d) {
+  lastData = d; stopSpeech();
   $('#summary').textContent = d.summary || '';
   const u = $('#urgent');
   u.hidden = !d.urgent;
@@ -123,10 +126,45 @@ go.addEventListener('click', async () => {
 });
 
 $('#again').addEventListener('click', () => {
+  stopSpeech();
   imageData = null; prev.hidden = true; fileIn.value = ''; go.disabled = true;
   $('#out').hidden = true; window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 sel.addEventListener('change', () => setLang(sel.value));
+
+
+// ---- read aloud (browser speech, free) ----
+function speechText() {
+  if (!lastData) return '';
+  const parts = [lastData.summary];
+  (lastData.tests || []).forEach(x => parts.push([x.name, x.value, x.unit, x.explanation].filter(Boolean).join(', ') + '.'));
+  return parts.filter(Boolean).join(' ');
+}
+function stopSpeech() {
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  speaking = false;
+  const b = $('#listen'); if (b) b.textContent = t('listen');
+}
+function startSpeech() {
+  const note = $('#voiceNote'); note.hidden = true;
+  if (!('speechSynthesis' in window)) { note.textContent = t('novoice'); note.hidden = false; return; }
+  const lang = cur.code.startsWith('x:') ? '' : cur.code;
+  const voices = speechSynthesis.getVoices();
+  if (lang && voices.length && !voices.some(v => v.lang.toLowerCase().startsWith(lang))) {
+    note.textContent = t('novoice'); note.hidden = false; return;
+  }
+  const chunks = speechText().split(/(?<=[.!?\u061F\u3002])\s+/).filter(Boolean);
+  speechSynthesis.cancel();
+  chunks.forEach((c, n) => {
+    const u = new SpeechSynthesisUtterance(c);
+    if (lang) u.lang = lang;
+    if (n === chunks.length - 1) u.onend = () => stopSpeech();
+    speechSynthesis.speak(u);
+  });
+  speaking = true; $('#listen').textContent = t('stop');
+}
+$('#listen').addEventListener('click', () => speaking ? stopSpeech() : startSpeech());
+if ('speechSynthesis' in window) speechSynthesis.getVoices();
 
 // ---- start ----
 fillSelect();
