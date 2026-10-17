@@ -1,26 +1,34 @@
 // Vercel serverless function (Groq - free key, no card needed).
 // المفتاح بيتخزن في Environment Variables باسم GROQ_API_KEY مش في الكود.
-const MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.6-27b';
+const MODELS = [process.env.GROQ_MODEL, 'qwen/qwen3.6-27b', 'qwen/qwen3.8-27b'].filter(Boolean);
 
-async function callGroq(userContent, system) {
+async function callOne(model, userContent, system) {
   const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + process.env.GROQ_API_KEY },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       temperature: 0.2,
-      max_completion_tokens: 6000,
-      response_format: { type: 'json_object' },
+      max_completion_tokens: 8000,
       messages: [{ role: 'system', content: system }, { role: 'user', content: userContent }]
     })
   });
   const j = await r.json();
-  if (!r.ok) throw new Error(j.error?.message || 'API error');
+  if (!r.ok) throw new Error(model + ': ' + (j.error?.message || r.status));
   let text = j.choices?.[0]?.message?.content || '';
   text = text.replace(/<think>[\s\S]*?<\/think>/g, '');
   const a = text.indexOf('{'), b = text.lastIndexOf('}');
-  if (a < 0 || b < a) throw new Error('Bad JSON');
+  if (a < 0 || b < a) throw new Error(model + ': no JSON in reply');
   return JSON.parse(text.slice(a, b + 1));
+}
+
+async function callGroq(userContent, system) {
+  const errors = [];
+  for (const m of MODELS) {
+    try { return await callOne(m, userContent, system); }
+    catch (e) { errors.push(e.message); }
+  }
+  throw new Error(errors.join(' | ').slice(0, 400));
 }
 
 const ANALYZE_SYSTEM = (lang) => `You are a careful medical-education assistant that explains lab test reports to ordinary people.
@@ -58,6 +66,6 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'Unknown action' });
   } catch (e) {
     console.error(e.message);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', detail: e.message });
   }
 }

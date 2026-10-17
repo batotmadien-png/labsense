@@ -24,7 +24,7 @@ function applyDict() {
 async function api(body) {
   const r = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const j = await r.json();
-  if (!r.ok) throw new Error(j.error || 'error');
+  if (!r.ok) throw new Error(j.detail || j.error || 'error');
   return j;
 }
 
@@ -117,6 +117,7 @@ go.addEventListener('click', async () => {
   } catch (e) {
     statusEl.textContent = '';
     statusEl.append(el('p', 'error', t('error')));
+    const d = el('p', 'meta', String(e.message || '')); d.dir = 'ltr'; statusEl.append(d);
   }
   go.disabled = false;
 });
