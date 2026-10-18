@@ -134,6 +134,8 @@ sel.addEventListener('change', () => setLang(sel.value));
 
 
 // ---- read aloud (browser speech, free) ----
+const REGION = { ar:'ar-SA', en:'en-US', fr:'fr-FR', es:'es-ES', de:'de-DE', it:'it-IT', pt:'pt-BR', tr:'tr-TR', ru:'ru-RU',
+  fa:'fa-IR', ur:'ur-PK', he:'he-IL', hi:'hi-IN', bn:'bn-BD', id:'id-ID', zh:'zh-CN', ja:'ja-JP', ko:'ko-KR', nl:'nl-NL', sw:'sw-KE' };
 function speechText() {
   if (!lastData) return '';
   const parts = [lastData.summary];
@@ -145,26 +147,31 @@ function stopSpeech() {
   speaking = false;
   const b = $('#listen'); if (b) b.textContent = t('listen');
 }
+function pickVoice(lang) {
+  const voices = speechSynthesis.getVoices() || [];
+  const base = lang.slice(0, 2).toLowerCase();
+  const norm = v => v.lang.replace('_', '-').toLowerCase();
+  return voices.find(v => norm(v) === lang.toLowerCase()) || voices.find(v => norm(v).startsWith(base)) || null;
+}
+function noVoice() { const n = $('#voiceNote'); n.textContent = t('novoice'); n.hidden = false; stopSpeech(); }
 function startSpeech() {
-  const note = $('#voiceNote'); note.hidden = true;
-  if (!('speechSynthesis' in window)) { note.textContent = t('novoice'); note.hidden = false; return; }
-  const lang = cur.code.startsWith('x:') ? '' : cur.code;
-  const voices = speechSynthesis.getVoices();
-  if (lang && voices.length && !voices.some(v => v.lang.toLowerCase().startsWith(lang))) {
-    note.textContent = t('novoice'); note.hidden = false; return;
-  }
+  $('#voiceNote').hidden = true;
+  if (!('speechSynthesis' in window)) return noVoice();
+  const base = cur.code.startsWith('x:') ? '' : cur.code;
+  const lang = base ? (REGION[base] || base) : '';
+  const voice = lang ? pickVoice(lang) : null;
   const chunks = speechText().split(/(?<=[.!?\u061F\u3002])\s+/).filter(Boolean);
-  speechSynthesis.cancel();
   chunks.forEach((c, n) => {
     const u = new SpeechSynthesisUtterance(c);
-    if (lang) u.lang = lang;
+    if (voice) { u.voice = voice; u.lang = voice.lang; } else if (lang) u.lang = lang;
+    u.onerror = ev => { if (ev.error !== 'interrupted' && ev.error !== 'canceled') noVoice(); };
     if (n === chunks.length - 1) u.onend = () => stopSpeech();
     speechSynthesis.speak(u);
   });
   speaking = true; $('#listen').textContent = t('stop');
 }
 $('#listen').addEventListener('click', () => speaking ? stopSpeech() : startSpeech());
-if ('speechSynthesis' in window) speechSynthesis.getVoices();
+if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
 
 // ---- start ----
 fillSelect();
