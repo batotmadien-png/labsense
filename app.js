@@ -212,8 +212,8 @@ function fmtDate(ts) {
 }
 const SCOL = { normal: 'var(--ok)', high: 'var(--hi)', low: 'var(--lo)', unknown: 'var(--muted)' };
 
-function drawChart(pts, band) {
-  const W = 640, H = 270, L = 46, R = 16, T = 20, B = 46, iw = W - L - R, ih = H - T - B;
+function drawChart(pts, band, width) {
+  const W = Math.max(300, Math.min(640, width || 640)), H = Math.max(210, Math.round(W * 0.5)), L = 42, R = 14, T = 20, B = 44, iw = W - L - R, ih = H - T - B;
   let lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v));
   if (band.low != null) lo = Math.min(lo, band.low);
   if (band.high != null) hi = Math.max(hi, band.high);
@@ -235,7 +235,7 @@ function drawChart(pts, band) {
   pts.forEach((p, i) => {
     s += `<circle cx="${x(i)}" cy="${y(p.v)}" r="6" style="fill:${SCOL[p.status] || SCOL.unknown}" stroke="#fff" stroke-width="2"/>`;
     s += `<text x="${x(i)}" y="${y(p.v) - 11}" text-anchor="middle" style="font-weight:700">${f(p.v)}</text>`;
-    if (pts.length <= 8 || i % 2 === 0) s += `<text x="${x(i)}" y="${H - 18}" text-anchor="middle">${fmtDate(p.t)}</text>`;
+    if (i % Math.max(1, Math.ceil(60 * pts.length / iw)) === 0) s += `<text x="${x(i)}" y="${H - 18}" text-anchor="middle">${fmtDate(p.t)}</text>`;
   });
   return s + '</svg>';
 }
@@ -261,7 +261,7 @@ function renderHistory() {
     const g = groups[hs.value];
     if (!g) { $('#chart').innerHTML = ''; $('#histNote').textContent = ''; return; }
     const latest = [...g.pts].reverse().find(p => p.low != null || p.high != null) || {};
-    $('#chart').innerHTML = drawChart(g.pts, { low: latest.low == null ? null : latest.low, high: latest.high == null ? null : latest.high });
+    $('#chart').innerHTML = drawChart(g.pts, { low: latest.low == null ? null : latest.low, high: latest.high == null ? null : latest.high }, $('#chart').clientWidth);
     $('#histNote').textContent = g.pts.length < 2 ? t('needMore') : '';
   };
   hs.onchange = draw; draw();
@@ -274,6 +274,7 @@ function renderHistory() {
     row.append(del); box.append(row);
   });
 }
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (!$('#history').hidden) renderHistory(); }, 250); });
 $('#histBtn').addEventListener('click', () => {
   const h = $('#history'); h.hidden = !h.hidden;
   if (!h.hidden) { renderHistory(); h.scrollIntoView({ behavior: 'smooth' }); }
