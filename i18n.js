@@ -16,6 +16,12 @@ const STRINGS = {
     notlab: "This doesn't look like a lab report. Try a clearer photo of the results page.",
     listen: "Listen to the explanation", stop: "Stop",
     novoice: "No voice for this language is installed on this device.",
+    history: "My history", close: "Close", delete: "Delete", clearAll: "Delete all history",
+    historyEmpty: "No saved reports yet. Analyze a report and it will appear here.",
+    pickTest: "Choose a test", needMore: "Upload another report later to see how this value changes over time.",
+    saved: "Saved to your history on this device only.", confirmClear: "Delete all saved history from this device?",
+    reportsLabel: "Saved reports", trend: "Trend", simple: "Use simpler words", simpler: "Explain even simpler",
+    tests_n: "tests",
     disclaimer: "For education only. This is not a diagnosis and does not replace your doctor."
   },
   ar: {
@@ -34,6 +40,12 @@ const STRINGS = {
     notlab: "الصورة دي مش شبه تقرير تحاليل. جرّب صورة أوضح لصفحة النتائج.",
     listen: "اسمع الشرح", stop: "إيقاف",
     novoice: "مفيش صوت للغة دي متسطّب على الجهاز ده.",
+    history: "سجل تحاليلي", close: "إغلاق", delete: "حذف", clearAll: "حذف كل السجل",
+    historyEmpty: "مفيش تقارير محفوظة لسه. حلّل تقرير وهيظهر هنا.",
+    pickTest: "اختار تحليل", needMore: "ارفع تقرير تاني بعدين عشان تشوف القيمة دي بتتغير إزاي مع الوقت.",
+    saved: "اتحفظ في سجلك على الجهاز ده بس.", confirmClear: "تحذف كل السجل المحفوظ من الجهاز ده؟",
+    reportsLabel: "التقارير المحفوظة", trend: "التغيّر", simple: "استخدم كلام أبسط", simpler: "اشرحلي بشكل أبسط",
+    tests_n: "تحاليل",
     disclaimer: "للتوعية فقط. ده مش تشخيص ولا بديل عن الدكتور."
   }
 };

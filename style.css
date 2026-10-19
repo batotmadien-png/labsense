@@ -44,3 +44,16 @@ h2{font-size:1.15rem;margin:28px 0 8px}
 .qs li{padding:8px 0;border-bottom:1px solid var(--line)}
 .urgent{background:#fff1ee;border:2px solid var(--hi);border-radius:10px;padding:14px;font-weight:600;margin-bottom:8px}
 .disclaimer{margin-top:32px;padding:14px;border-radius:10px;background:#E1ECE9;font-size:.9rem}
+
+.hbar{display:flex;gap:8px;align-items:center}
+.hbtn{width:auto;margin:0;padding:8px 12px;background:transparent;color:var(--brand);border:1px solid var(--brand);font-size:.9rem}
+.chk{display:flex;gap:8px;align-items:center;margin-top:12px;cursor:pointer}
+.chk input{width:18px;height:18px}
+#history{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}
+#history h2{margin-top:0}
+#history h3{font-size:1rem;margin:18px 0 6px}
+select.wide{width:100%;margin-top:6px}
+#chart svg{width:100%;height:auto;direction:ltr;display:block;margin-top:10px}
+#chart text{font-family:inherit;font-size:11px;fill:var(--muted)}
+.rep{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.rep button{width:auto;margin:0;padding:2px 12px;background:transparent;color:var(--hi);border:1px solid var(--hi);font-size:.85rem}
