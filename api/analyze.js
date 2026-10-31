@@ -1,21 +1,49 @@
 // Vercel serverless function (Groq - free key, no card needed).
 // المفتاح بيتخزن في Environment Variables باسم GROQ_API_KEY مش في الكود.
-const MODELS = [process.env.GROQ_MODEL, 'qwen/qwen3.6-27b', 'qwen/qwen3.8-27b'].filter(Boolean);
+// Models are tried in order. qwen/qwen3.6-27b was removed by Groq, so only 3.8 is kept.
+// You can still override with GROQ_MODEL in Vercel (it is tried first).
+const MODEL_LIST = [...new Set([process.env.GROQ_MODEL, 'qwen/qwen3.8-27b'].filter(Boolean))];
 
-async function callOne(model, userContent, system) {
+const COMPACT = '\n- COMPACT OUTPUT: keep the summary under 25 words, every explanation under 15 words, and at most 4 questions.';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// "Please try again in 14.05s" / "1m2.5s" / "800ms"  ->  milliseconds
+function waitMs(msg) {
+  const m = /try again in\s*(?:(\d+)m)?\s*([\d.]+)(ms|s)/i.exec(msg || '');
+  if (!m) return null;
+  const mins = m[1] ? Number(m[1]) * 60000 : 0;
+  const v = parseFloat(m[2]);
+  return mins + (m[3].toLowerCase() === 'ms' ? v : v * 1000);
+}
+
+async function post(body) {
   const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + process.env.GROQ_API_KEY },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_completion_tokens: 8000,
-      messages: [{ role: 'system', content: system }, { role: 'user', content: userContent }]
-    })
+    body: JSON.stringify(body)
   });
-  const j = await r.json();
-  if (!r.ok) throw new Error(model + ': ' + (j.error?.message || r.status));
-  let text = j.choices?.[0]?.message?.content || '';
+  return { ok: r.ok, status: r.status, j: await r.json() };
+}
+
+async function callOne(model, userContent, system, opts = {}) {
+  const base = {
+    model,
+    temperature: 0.2,
+    max_completion_tokens: opts.compact ? 950 : 3000,
+    messages: [
+      { role: 'system', content: system + (opts.compact ? COMPACT : '') },
+      { role: 'user', content: userContent }
+    ]
+  };
+  // reasoning_effort "none" = no hidden "thinking" tokens (saves the per-minute token budget)
+  let r = await post({ ...base, reasoning_effort: 'none' });
+  if (!r.ok && /reasoning/i.test(JSON.stringify(r.j))) r = await post(base);
+  if (!r.ok) {
+    const e = new Error(model + ': ' + (r.j.error?.message || r.status));
+    e.status = r.status;
+    throw e;
+  }
+  let text = r.j.choices?.[0]?.message?.content || '';
   text = text.replace(/<think>[\s\S]*?<\/think>/g, '');
   const a = text.indexOf('{'), b = text.lastIndexOf('}');
   if (a < 0 || b < a) throw new Error(model + ': no JSON in reply');
@@ -24,9 +52,22 @@ async function callOne(model, userContent, system) {
 
 async function callGroq(userContent, system) {
   const errors = [];
-  for (const m of MODELS) {
-    try { return await callOne(m, userContent, system); }
-    catch (e) { errors.push(e.message); }
+  let waited = 0; // total waiting time, kept under ~25s
+  for (const m of MODEL_LIST) {
+    let compact = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await callOne(m, userContent, system, { compact });
+      } catch (e) {
+        const msg = e.message || '';
+        errors.push(msg);
+        if (/does not exist|do not have access|decommission|not found/i.test(msg)) break; // next model
+        if (/too large/i.test(msg) && !compact) { compact = true; continue; }          // retry with a shorter answer
+        const w = e.status === 429 ? waitMs(msg) : null;                                // rate limit: wait, then retry
+        if (w != null && waited + w <= 25000) { await sleep(w + 300); waited += w + 300; continue; }
+        break;
+      }
+    }
   }
   throw new Error(errors.join(' | ').slice(0, 400));
 }
@@ -68,6 +109,7 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'Unknown action' });
   } catch (e) {
     console.error(e.message);
-    res.status(500).json({ error: 'Server error', detail: e.message });
+    const busy = /rate limit|too large|try again/i.test(e.message || '');
+    res.status(busy ? 429 : 500).json({ error: busy ? 'busy' : 'Server error', detail: e.message });
   }
 }
